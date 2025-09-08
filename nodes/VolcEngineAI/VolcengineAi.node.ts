@@ -1,7 +1,6 @@
 import type { INodeType, INodeTypeDescription } from 'n8n-workflow';
 import { NodeConnectionTypes } from 'n8n-workflow';
 import { chatFields, chatOperations } from './ChatDescription';
-import { FIMFields, fimOperations } from './FIMDescription';
 
 export class VolcengineAi implements INodeType {
 	description: INodeTypeDescription = {
@@ -38,19 +37,13 @@ export class VolcengineAi implements INodeType {
 					{
 						name: 'Chat',
 						value: 'chat'
-					},
-					{
-						name: 'FIM',
-						value: 'fim'
 					}
 				],
 				default: 'chat',
 			},
 
 			...chatOperations,
-			...fimOperations,
-			...chatFields,
-			...FIMFields
+			...chatFields
 		],
 	};
 }
