@@ -19,7 +19,7 @@ export class VolcengineAiChain implements INodeType {
 		displayName: 'VolcengineAi Chat Model',
 
 		name: 'volcengineAiChain',
-		icon: { light: 'file:openAiLight.svg', dark: 'file:openAiLight.dark.svg' },
+		icon: { light: 'file:volcengine.logo.svg', dark: 'file:volcengine.logo.svg' },
 		group: ['transform'],
 		version: [1, 1.1, 1.2],
 		description: 'For advanced usage with an AI chain',

@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-volcengine-ai",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "n8n custom node for VolcEngine AI services including chat completion and code completion",
   "keywords": [
     "n8n-community-node-package",
@@ -46,7 +46,8 @@
       "dist/credentials/VolcengineAiApi.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/VolcengineAi/VolcengineAi.node.js"
+      "dist/nodes/VolcengineAi/VolcengineAi.node.js",
+      "dist/nodes/VolcengineAiChain/VolcengineAiChain.node.js"
     ]
   },
   "devDependencies": {
