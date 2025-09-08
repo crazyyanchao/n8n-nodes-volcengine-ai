@@ -1,23 +1,29 @@
 {
   "name": "n8n-nodes-volcengine-ai",
-  "version": "0.1.4",
-  "description": "n8n community node for VolcEngine AI API",
+  "version": "0.1.5",
+  "description": "n8n custom node for VolcEngine AI services including chat completion and code completion",
   "keywords": [
     "n8n-community-node-package",
     "volcengine",
+    "volcengine-ai",
     "ai",
-    "chat",
-    "completion"
+    "chat-completion",
+    "code-completion",
+    "fim",
+    "llm"
   ],
   "license": "MIT",
-  "homepage": "https://github.com/volcengine/volcengine-ai",
+  "homepage": "https://github.com/crazyyanchao/n8n-nodes-volcengine-ai",
   "author": {
-    "name": "yanchaoma",
+    "name": "Tony.Ma",
     "email": "yanchaoma@foxmail.com"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/volcengine/n8n-nodes-volcengine-ai.git"
+    "url": "https://github.com/crazyyanchao/n8n-nodes-volcengine-ai.git"
+  },
+  "bugs": {
+    "url": "https://github.com/crazyyanchao/n8n-nodes-volcengine-ai/issues"
   },
   "engines": {
     "node": ">=22.16"
@@ -37,10 +43,10 @@
   "n8n": {
     "n8nNodesApiVersion": 1,
     "credentials": [
-      "dist/credentials/VolcEngineAiApi.credentials.js"
+      "dist/credentials/VolcEngineAiApi.credentials.ts"
     ],
     "nodes": [
-      "dist/nodes/VolcengineAi/VolcengineAi.node.js"
+      "dist/nodes/VolcengineAi/VolcengineAi.node.ts"
     ]
   },
   "devDependencies": {

@@ -93,7 +93,7 @@ To use this node, you need:
 ## Compatibility
 
 - **Minimum n8n Version**: 1.0.0
-- **Node.js Version**: >=20.15
+- **Node.js Version**: >=22.16
 - **Tested Version**: n8n 1.0.0+
 
 ## Resources
