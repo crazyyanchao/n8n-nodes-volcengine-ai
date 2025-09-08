@@ -1,5 +1,5 @@
 import type { INodeType, INodeTypeDescription } from 'n8n-workflow';
-import { NodeConnectionType } from 'n8n-workflow';
+import { NodeConnectionTypes } from 'n8n-workflow';
 import { chatFields, chatOperations } from './ChatDescription';
 import { FIMFields, fimOperations } from './FIMDescription';
 
@@ -16,8 +16,8 @@ export class VolcengineAiNode implements INodeType {
 		defaults: {
 			name: 'VolcEngine AI',
 		},
-		inputs: [NodeConnectionType.Main],
-		outputs: [NodeConnectionType.Main],
+		inputs: [NodeConnectionTypes.Main],
+		outputs: [NodeConnectionTypes.Main],
 		credentials: [
 			{
 				name: 'volcEngineAiApi',
