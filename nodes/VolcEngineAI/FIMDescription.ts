@@ -35,51 +35,12 @@ const completeOperations: INodeProperties[] = [
 	{
 		displayName: 'Model',
 		name: 'model',
-		type: 'options',
+		type: 'string',
 		description:
-			'The model which will generate the completion. <a href="https://www.volcengine.com/docs/82379/1099475">Learn more</a>.',
+			'The model which will generate the completion. Optional models include doubao-seed-1-6-250715, deepseek-v3-1-250821, etc. See documentation for details. <a href="https://www.volcengine.com/docs/82379/1099475">Learn more</a>.',
 		displayOptions: {
 			show: {
 				resource: ['fim'],
-			},
-		},
-		typeOptions: {
-			loadOptions: {
-				routing: {
-					request: {
-						method: 'GET',
-						url: '/models',
-					},
-					output: {
-						postReceive: [
-							{
-								type: 'rootProperty',
-								properties: {
-									property: 'data',
-								},
-							},
-							{
-								type: 'filter',
-								properties: {
-									pass: "={{ $responseItem.id.startsWith('ep-') }}",
-								},
-							},
-							{
-								type: 'setKeyValue',
-								properties: {
-									name: '={{$responseItem.id}}',
-									value: '={{$responseItem.id}}',
-								},
-							},
-							{
-								type: 'sort',
-								properties: {
-									key: 'name',
-								},
-							},
-						],
-					},
-				},
 			},
 		},
 		routing: {
@@ -88,7 +49,7 @@ const completeOperations: INodeProperties[] = [
 				property: 'model',
 			},
 		},
-		default: '',
+		default: 'doubao-seed-1-6-250715',
 	},
 	{
 		displayName: 'Prompt',

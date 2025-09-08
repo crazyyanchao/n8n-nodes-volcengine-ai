@@ -2,15 +2,12 @@ import type {
 	IAuthenticateGeneric,
 	ICredentialType,
 	INodeProperties,
-	Icon,
 } from 'n8n-workflow';
 
 export class VolcengineAiApi implements ICredentialType {
 	name = 'volcengineAiApi';
 
 	displayName = 'VolcEngine AI API';
-
-	icon: Icon = { light: 'file:volcengine.logo.svg', dark: 'file:volcengine.logo.svg' };
 
 	documentationUrl = 'https://www.volcengine.com/docs/82379/1099475';
 
