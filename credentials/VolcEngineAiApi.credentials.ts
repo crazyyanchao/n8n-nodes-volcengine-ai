@@ -5,8 +5,8 @@ import type {
 	Icon,
 } from 'n8n-workflow';
 
-export class VolcEngineAiApi implements ICredentialType {
-	name = 'volcEngineAiApi';
+export class VolcengineAiApi implements ICredentialType {
+	name = 'volcengineAiApi';
 
 	displayName = 'VolcEngine AI API';
 

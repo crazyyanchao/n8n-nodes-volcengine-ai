@@ -20,7 +20,7 @@ export class VolcengineAiNode implements INodeType {
 		outputs: [NodeConnectionTypes.Main],
 		credentials: [
 			{
-				name: 'volcEngineAiApi',
+				name: 'volcengineAiApi',
 				required: true,
 			},
 		],
