@@ -26,7 +26,7 @@ export class VolcengineAiApi implements ICredentialType {
 		type: 'generic',
 		properties: {
 			headers: {
-				Authorization: '={{$credentials.apiKey}}'
+				Authorization: '=Bearer {{$credentials.apiKey}}'
 			},
 		},
 	};
