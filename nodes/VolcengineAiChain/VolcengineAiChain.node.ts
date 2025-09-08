@@ -6,6 +6,7 @@ import {
 	type SupplyData,
 } from 'n8n-workflow';
 import { searchModels } from './methods/loadModels';
+import { getConnectionHintNoticeField } from './methods/sharedFields';
 
 export class VolcengineAiChain implements INodeType {
 	methods = {
@@ -23,7 +24,7 @@ export class VolcengineAiChain implements INodeType {
 		version: [1, 1.1, 1.2],
 		description: 'For advanced usage with an AI chain',
 		defaults: {
-			name: 'OpenAI Chat Model',
+			name: 'VolcengineAi Chat Model',
 		},
 		codex: {
 			categories: ['AI'],
@@ -56,6 +57,7 @@ export class VolcengineAiChain implements INodeType {
 				'={{ $parameter.options?.baseURL?.split("/").slice(0,-1).join("/") || $credentials?.url?.split("/").slice(0,-1).join("/") || "https://ark.cn-beijing.volces.com/api/v3" }}',
 		},
 		properties: [
+			getConnectionHintNoticeField([NodeConnectionTypes.AiChain, NodeConnectionTypes.AiAgent]),
 			{
 				displayName:
 					'If using JSON response format, you must include word "json" in the prompt in your chain or agent. Also, make sure to select latest models released post November 2023.',
