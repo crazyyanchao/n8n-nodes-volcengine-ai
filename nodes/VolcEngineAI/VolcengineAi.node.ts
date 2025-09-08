@@ -3,7 +3,7 @@ import { NodeConnectionTypes } from 'n8n-workflow';
 import { chatFields, chatOperations } from './ChatDescription';
 import { FIMFields, fimOperations } from './FIMDescription';
 
-export class VolcengineAiNode implements INodeType {
+export class VolcengineAi implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'VolcEngine AI',
 		name: 'volcengineAi',
