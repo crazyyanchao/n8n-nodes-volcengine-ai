@@ -318,7 +318,7 @@ export class VolcengineAiChain implements INodeType {
 		};
 
 		const model = new ChatOpenAI({
-			openAIApiKey: credentials.apiKey as string,
+			apiKey: credentials.apiKey as string,
 			model: modelName,
 			...options,
 			timeout: options.timeout ?? 60000,
