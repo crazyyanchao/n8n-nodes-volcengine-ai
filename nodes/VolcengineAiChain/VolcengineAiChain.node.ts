@@ -75,28 +75,17 @@ export class VolcengineAiChain implements INodeType {
 				displayName: 'Model',
 				name: 'model',
 				type: 'options',
-				description: '选择火山引擎AI模型',
+				description: 'Select VolcEngine AI model',
 				options: [
-					{ name: '豆包 代码生成', value: 'doubao-code' },
-					{ name: '豆包 对话', value: 'doubao-chat' },
-					{ name: '豆包 多模态', value: 'doubao-multimodal' },
-					{ name: '豆包 翻译', value: 'doubao-translate' },
-					{ name: '豆包 内容审核', value: 'doubao-review' },
-					{ name: '豆包 内容优化', value: 'doubao-optimize' },
-					{ name: '豆包 数据分析', value: 'doubao-analysis' },
-					{ name: '豆包 图像生成', value: 'doubao-image' },
-					{ name: '豆包 文本改写', value: 'doubao-rewrite' },
-					{ name: '豆包 文本嵌入', value: 'doubao-text-embedding' },
-					{ name: '豆包 问答', value: 'doubao-qa' },
-					{ name: '豆包 写作助手', value: 'doubao-writing' },
-					{ name: '豆包 语音合成', value: 'doubao-speech' },
-					{ name: '豆包 摘要', value: 'doubao-summary' },
-					{ name: '豆包 Lite 128K', value: 'doubao-lite-128k' },
-					{ name: '豆包 Lite 32K', value: 'doubao-lite-32k' },
-					{ name: '豆包 Lite 4K', value: 'doubao-lite-4k' },
-					{ name: '豆包 Pro 128K', value: 'doubao-pro-128k' },
-					{ name: '豆包 Pro 32K', value: 'doubao-pro-32k' },
-					{ name: '豆包 Pro 4K', value: 'doubao-pro-4k' }
+					{ name: 'DeepSeek V3 (250324)', value: 'deepseek-v3-250324' },
+					{ name: 'DeepSeek V3.1 (250821)', value: 'deepseek-v3-1-250821' },
+					{ name: 'Doubao 1.5 Pro 32K Character (250715)', value: 'doubao-1-5-pro-32k-character-250715' },
+					{ name: 'Doubao Seed 1.6 (250615)', value: 'doubao-seed-1-6-250615' },
+					{ name: 'Doubao Seed 1.6 Flash (250615)', value: 'doubao-seed-1-6-flash-250615' },
+					{ name: 'Doubao Seed 1.6 Flash (250715)', value: 'doubao-seed-1-6-flash-250715' },
+					{ name: 'Doubao Seed 1.6 Flash (250828)', value: 'doubao-seed-1-6-flash-250828' },
+					{ name: 'Doubao Seed 1.6 Vision (250815)', value: 'doubao-seed-1-6-vision-250815' },
+					{ name: 'Kimi K2 (250711)', value: 'kimi-k2-250711' }
 				],
 				routing: {
 					send: {
@@ -104,7 +93,7 @@ export class VolcengineAiChain implements INodeType {
 						property: 'model',
 					},
 				},
-				default: 'doubao-pro-4k',
+				default: 'deepseek-v3-1-250821',
 				displayOptions: {
 					hide: {
 						'@version': [{ _cnd: { gte: 1.2 } }],
@@ -115,14 +104,14 @@ export class VolcengineAiChain implements INodeType {
 				displayName: 'Model',
 				name: 'model',
 				type: 'resourceLocator',
-				default: { mode: 'list', value: 'doubao-pro-4k' },
+				default: { mode: 'list', value: 'deepseek-v3-1-250821' },
 				required: true,
 				modes: [
 					{
 						displayName: 'From List',
 						name: 'list',
 						type: 'list',
-						placeholder: '选择模型...',
+						placeholder: 'Select model...',
 						typeOptions: {
 							searchListMethod: 'searchModels',
 							searchable: true,
@@ -132,10 +121,10 @@ export class VolcengineAiChain implements INodeType {
 						displayName: 'ID',
 						name: 'id',
 						type: 'string',
-						placeholder: 'doubao-pro-4k',
+						placeholder: 'deepseek-v3-1-250821',
 					},
 				],
-				description: '选择火山引擎AI模型，可以从列表中选择或直接输入模型ID。',
+				description: 'Select VolcEngine AI model, you can choose from the list or directly enter the model ID [VolcEngine AI Models](https://www.volcengine.com/docs/82379/1330310)',
 				displayOptions: {
 					hide: {
 						'@version': [{ _cnd: { lte: 1.1 } }],

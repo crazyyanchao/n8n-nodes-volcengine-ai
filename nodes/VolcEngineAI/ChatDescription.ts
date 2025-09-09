@@ -36,21 +36,75 @@ const completeOperations: INodeProperties[] = [
 	{
 		displayName: 'Model',
 		name: 'model',
-		type: 'string',
-		description:
-			'The model which will generate the completion. Optional models include doubao-seed-1-6-250715, deepseek-v3-1-250821, etc. See documentation for details. <a href="https://www.volcengine.com/docs/82379/1099475">Learn more</a>.',
-		displayOptions: {
-			show: {
-				resource: ['chat'],
-			},
-		},
+		type: 'options',
+		description: 'Select VolcEngine AI model',
+		options: [
+			{ name: 'DeepSeek V3 (250324)', value: 'deepseek-v3-250324' },
+			{ name: 'DeepSeek V3.1 (250821)', value: 'deepseek-v3-1-250821' },
+			{ name: 'Doubao 1.5 Pro 32K Character (250715)', value: 'doubao-1-5-pro-32k-character-250715' },
+			{ name: 'Doubao Seed 1.6 (250615)', value: 'doubao-seed-1-6-250615' },
+			{ name: 'Doubao Seed 1.6 Flash (250615)', value: 'doubao-seed-1-6-flash-250615' },
+			{ name: 'Doubao Seed 1.6 Flash (250715)', value: 'doubao-seed-1-6-flash-250715' },
+			{ name: 'Doubao Seed 1.6 Flash (250828)', value: 'doubao-seed-1-6-flash-250828' },
+			{ name: 'Doubao Seed 1.6 Vision (250815)', value: 'doubao-seed-1-6-vision-250815' },
+			{ name: 'Kimi K2 (250711)', value: 'kimi-k2-250711' }
+		],
 		routing: {
 			send: {
 				type: 'body',
 				property: 'model',
 			},
 		},
-		default: 'doubao-seed-1-6-250715',
+		default: 'doubao-seed-1-6-250615',
+		displayOptions: {
+			show: {
+				resource: ['chat'],
+			},
+			hide: {
+				'@version': [{ _cnd: { gte: 1.1 } }],
+			},
+		},
+	},
+	{
+		displayName: 'Model',
+		name: 'model',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: 'doubao-seed-1-6-250715' },
+		required: true,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				placeholder: 'Select model...',
+				typeOptions: {
+					searchListMethod: 'searchModels',
+					searchable: true,
+				},
+			},
+			{
+				displayName: 'ID',
+				name: 'id',
+				type: 'string',
+				placeholder: 'doubao-seed-1-6-250715',
+			},
+		],
+		description: 'Select VolcEngine AI model, you can choose from the list or directly enter the model ID [VolcEngine AI Models](https://www.volcengine.com/docs/82379/1099475)',
+		displayOptions: {
+			show: {
+				resource: ['chat'],
+			},
+			hide: {
+				'@version': [{ _cnd: { lte: 1.0 } }],
+			},
+		},
+		routing: {
+			send: {
+				type: 'body',
+				property: 'model',
+				value: '={{ $value.value || $value }}',
+			},
+		},
 	},
 	// Prompt
 	{
