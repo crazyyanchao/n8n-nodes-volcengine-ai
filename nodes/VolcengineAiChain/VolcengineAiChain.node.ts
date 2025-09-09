@@ -7,6 +7,7 @@ import {
 } from 'n8n-workflow';
 import { searchModels } from './methods/loadModels';
 import { getConnectionHintNoticeField } from './methods/sharedFields';
+import {ChatOpenAI, type ClientOptions} from '@langchain/openai';
 
 export class VolcengineAiChain implements INodeType {
 	methods = {
@@ -312,23 +313,28 @@ export class VolcengineAiChain implements INodeType {
 			reasoningEffort?: 'low' | 'medium' | 'high';
 		};
 
-		// 创建火山引擎AI模型配置
-		const modelConfig = {
-			model: modelName,
-			apiKey: credentials.apiKey as string,
+		const configuration: ClientOptions = {
 			baseURL: options.baseURL || 'https://ark.cn-beijing.volces.com/api/v3',
-			temperature: options.temperature ?? 0.7,
-			maxTokens: options.maxTokens ?? -1,
-			timeout: options.timeout ?? 60000,
-			maxRetries: options.maxRetries ?? 2,
-			topP: options.topP ?? 1,
-			frequencyPenalty: options.frequencyPenalty ?? 0,
-			presencePenalty: options.presencePenalty ?? 0,
-			responseFormat: options.responseFormat || 'text',
 		};
 
+		const model = new ChatOpenAI({
+			openAIApiKey: credentials.apiKey as string,
+			model: modelName,
+			...options,
+			timeout: options.timeout ?? 60000,
+			maxRetries: options.maxRetries ?? 2,
+			configuration,
+
+			modelKwargs: options.responseFormat
+				? {
+						response_format: { type: options.responseFormat },
+					}
+				: undefined,
+
+		});
+
 		return {
-			response: modelConfig,
+			response: model,
 		};
 	}
 }

@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-volcengine-ai",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "description": "n8n custom node for VolcEngine AI services including chat completion and code completion",
   "keywords": [
     "n8n-community-node-package",
@@ -64,6 +64,9 @@
   },
   "peerDependencies": {
     "n8n-workflow": "*",
-    "n8n-nodes-langchain": "*"
+    "@langchain/community": "*",
+    "@langchain/core": "*",
+    "@langchain/openai": "*",
+    "openai": "*"
   }
 }
