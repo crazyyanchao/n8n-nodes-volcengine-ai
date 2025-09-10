@@ -405,7 +405,7 @@ const SpeechSynthesizerOperate: ResourceOperations = {
 
 		// Get credentials
 		const credentials = await this.getCredentials('volcengineAiApi') as {
-			accessKey: string;
+			apiKey: string;
 		};
 
 		// Generate MD5 for caching
@@ -456,7 +456,7 @@ const SpeechSynthesizerOperate: ResourceOperations = {
 			const ws = new WebSocket(wsUrl, {
 				headers: {
 					'X-Api-App-Id': appId,
-					'X-Api-Access-Key': credentials.accessKey,
+					'X-Api-Access-Key': credentials.apiKey,
 					'X-Api-Resource-Id': resourceId,
 					'X-Api-Request-Id': crypto.randomUUID(),
 				}
