@@ -150,6 +150,22 @@ const SpeechSynthesizerOperate: ResourceOperations = {
 	description: 'Convert text to speech using VolcEngine AI Speech Synthesizer',
 	options: [
 		{
+			displayName: 'App ID',
+			name: 'appId',
+			type: 'string',
+			default: '',
+			description: 'VolcEngine AI App ID for authentication',
+			required: true,
+		},
+		{
+			displayName: 'Resource ID',
+			name: 'resourceId',
+			type: 'string',
+			default: 'volc.service_type.10029',
+			description: 'VolcEngine AI Resource ID for speech synthesis service',
+			required: true,
+		},
+		{
 			displayName: 'Text to Synthesize',
 			name: 'text',
 			type: 'string',
@@ -369,6 +385,8 @@ const SpeechSynthesizerOperate: ResourceOperations = {
 		}
 
 		// Get all required parameters
+		const appId = this.getNodeParameter('appId', index) as string;
+		const resourceId = this.getNodeParameter('resourceId', index) as string;
 		const text = this.getNodeParameter('text', index) as string;
 		const speaker = this.getNodeParameter('speaker', index) as string;
 		const format = this.getNodeParameter('format', index) as string;
@@ -382,12 +400,11 @@ const SpeechSynthesizerOperate: ResourceOperations = {
 		const model = this.getNodeParameter('model', index) as string;
 		const outputFormat = this.getNodeParameter('outputFormat', index) as string;
 		const enableCache = this.getNodeParameter('enableCache', index) as boolean;
-		const cacheDir = this.getNodeParameter('cacheDir', index) as string;
+		const cacheDir = enableCache ? (this.getNodeParameter('cacheDir', index) as string) : './cache/audio';
 		const additionalOptions = this.getNodeParameter('additionalOptions', index, {}) as IDataObject;
 
 		// Get credentials
 		const credentials = await this.getCredentials('volcengineAiApi') as {
-			appId: string;
 			accessKey: string;
 		};
 
@@ -438,9 +455,9 @@ const SpeechSynthesizerOperate: ResourceOperations = {
 		return new Promise((resolve, reject) => {
 			const ws = new WebSocket(wsUrl, {
 				headers: {
-					'X-Api-App-Id': credentials.appId,
+					'X-Api-App-Id': appId,
 					'X-Api-Access-Key': credentials.accessKey,
-					'X-Api-Resource-Id': 'volc.service_type.10029',
+					'X-Api-Resource-Id': resourceId,
 					'X-Api-Request-Id': crypto.randomUUID(),
 				}
 			});
