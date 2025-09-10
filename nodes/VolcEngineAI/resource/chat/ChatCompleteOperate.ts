@@ -1,10 +1,10 @@
 import { IDataObject, IExecuteFunctions } from 'n8n-workflow';
-import { ResourceOperations } from '../../../help/type/IResource';
+import { ResourceOperations } from '../../help/type/IResource';
 import VolcengineAiRequestUtils from '../../utils/VolcengineAiRequestUtils';
 
 const ChatCompleteOperate: ResourceOperations = {
 	name: 'Complete',
-	value: 'chat:complete',
+	value: 'chatComplete',
 	description: 'Creates a model response for the given chat conversation',
 	options: [
 		{

@@ -24,9 +24,9 @@ import {
 } from 'n8n-workflow';
 
 // Import helper utilities
-import ResourceBuilder from '../help/builder/ResourceBuilder';
-import ModuleLoadUtils from '../help/utils/ModuleLoadUtils';
-import { ResourceOperations } from '../help/type/IResource';
+import ResourceBuilder from './help/builder/ResourceBuilder';
+import ModuleLoadUtils from './help/utils/ModuleLoadUtils';
+import { ResourceOperations } from './help/type/IResource';
 import { searchModels } from './methods/loadModels';
 
 /* -------------------------------------------------------------------
