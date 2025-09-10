@@ -3,52 +3,19 @@ import { ResourceOperations } from '../../help/type/IResource';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
+import {
+	MsgType,
+	EventType,
+	ReceiveMessage,
+	FullClientRequest
+} from '../../utils/protocols';
 
 // WebSocket import - will be dynamically imported
 let WebSocket: any;
 
-// WebSocket binary protocol constants
-const PROTOCOL_VERSION = 0b0001;
-const HEADER_SIZE = 0b0001;
-const MESSAGE_TYPE_SEND_TEXT = 0b0001;
-const SERIALIZATION_JSON = 0b0001;
-const COMPRESSION_NONE = 0b0000;
-const MESSAGE_FLAGS_WITH_EVENT = 0b0100;
-
-// Event codes
-const EVENT_TTS_SENTENCE_START = 350;
-const EVENT_TTS_SENTENCE_END = 351;
-const EVENT_TTS_RESPONSE = 352;
-const EVENT_SESSION_FINISHED = 152;
-
-// Helper function to create binary frame
-function createBinaryFrame(messageType: number, serialization: number, compression: number, eventCode: number, payload: Buffer): Buffer {
-	const header = Buffer.alloc(4);
-	header[0] = (PROTOCOL_VERSION << 4) | HEADER_SIZE;
-	header[1] = (messageType << 4) | MESSAGE_FLAGS_WITH_EVENT;
-	header[2] = (serialization << 4) | compression;
-	header[3] = 0; // Reserved
-
-	const eventBuffer = Buffer.alloc(4);
-	eventBuffer.writeUInt32BE(eventCode, 0);
-
-	const payloadSizeBuffer = Buffer.alloc(4);
-	payloadSizeBuffer.writeUInt32BE(payload.length, 0);
-
-	return Buffer.concat([header, eventBuffer, payloadSizeBuffer, payload]);
-}
-
-// Helper function to parse binary frame
-function parseBinaryFrame(buffer: Buffer): { eventCode: number; payload: Buffer } {
-	if (buffer.length < 8) {
-		throw new Error('Invalid frame: too short');
-	}
-
-	const eventCode = buffer.readUInt32BE(4);
-	const payloadSize = buffer.readUInt32BE(8);
-	const payload = buffer.slice(12, 12 + payloadSize);
-
-	return { eventCode, payload };
+// Helper function to generate UUID
+function generateUUID(): string {
+	return crypto.randomUUID();
 }
 
 // Helper function to generate MD5 hash for caching
@@ -405,7 +372,7 @@ const SpeechSynthesizerOperate: ResourceOperations = {
 
 		// Get credentials
 		const credentials = await this.getCredentials('volcengineAiApi') as {
-			apiKey: string;
+			accessToken: string;
 		};
 
 		// Generate MD5 for caching
@@ -452,30 +419,30 @@ const SpeechSynthesizerOperate: ResourceOperations = {
 		// Create WebSocket connection
 		const wsUrl = 'wss://openspeech.bytedance.com/api/v3/tts/unidirectional/stream';
 
-		return new Promise((resolve, reject) => {
-			const ws = new WebSocket(wsUrl, {
-				headers: {
-					'X-Api-App-Id': appId,
-					'X-Api-Access-Key': credentials.apiKey,
-					'X-Api-Resource-Id': resourceId,
-					'X-Api-Request-Id': crypto.randomUUID(),
-				}
-			});
+		return new Promise(async (resolve, reject) => {
+			try {
+				const ws = new WebSocket(wsUrl, {
+					headers: {
+						'X-Api-App-Key': appId,
+						'X-Api-Access-Key': credentials.accessToken,
+						'X-Api-Resource-Id': resourceId,
+						'X-Api-Connect-Id': generateUUID(),
+					}
+				});
 
-			let audioData: Buffer[] = [];
-			let isCompleted = false;
-			let hasError = false;
+				// Wait for connection to open
+				await new Promise<void>((resolve, reject) => {
+					ws.on('open', resolve);
+					ws.on('error', reject);
+				});
 
-			ws.on('open', () => {
 				this.logger.debug('WebSocket connection opened');
 
-				// Prepare request payload
+				// Prepare request payload according to official documentation
 				const requestPayload = {
 					user: {
-						uid: 'n8n-user'
+						uid: generateUUID()
 					},
-					event: 'SendText',
-					namespace: 'BidirectionalTTS',
 					req_params: {
 						text: text,
 						speaker: speaker,
@@ -489,110 +456,83 @@ const SpeechSynthesizerOperate: ResourceOperations = {
 							...(emotion && { emotion: emotion, emotion_scale: emotionScale }),
 						},
 						...(model && { model: model }),
-						additions: {
+						additions: JSON.stringify({
 							...(additionalOptions.silenceDuration && { silence_duration: additionalOptions.silenceDuration }),
 							...(additionalOptions.enableLanguageDetector && { enable_language_detector: additionalOptions.enableLanguageDetector }),
 							...(additionalOptions.disableMarkdownFilter && { disable_markdown_filter: additionalOptions.disableMarkdownFilter }),
 							...(additionalOptions.disableEmojiFilter && { disable_emoji_filter: additionalOptions.disableEmojiFilter }),
 							...(additionalOptions.explicitLanguage && { explicit_language: additionalOptions.explicitLanguage }),
 							...(additionalOptions.contextLanguage && { context_language: additionalOptions.contextLanguage }),
-						}
+						})
 					}
 				};
 
-				// Send text request
-				const payload = Buffer.from(JSON.stringify(requestPayload));
-				const frame = createBinaryFrame(
-					MESSAGE_TYPE_SEND_TEXT,
-					SERIALIZATION_JSON,
-					COMPRESSION_NONE,
-					0, // No event code for SendText
-					payload
-				);
+				// Send text request using official protocol
+				await FullClientRequest(ws, new TextEncoder().encode(JSON.stringify(requestPayload)));
 
-				ws.send(frame);
-			});
+				let audioData: Buffer[] = [];
+				let isCompleted = false;
 
-			ws.on('message', (data: Buffer) => {
-				try {
-					const { eventCode, payload } = parseBinaryFrame(data);
+				// Process messages
+				while (true) {
+					const msg = await ReceiveMessage(ws);
+					this.logger.debug(`Received message: ${msg.toString()}`);
 
-					switch (eventCode) {
-						case EVENT_TTS_SENTENCE_START:
-							this.logger.debug('TTS sentence start');
-							break;
+					switch (msg.type) {
+						case MsgType.FullServerResponse:
+							if (msg.event === EventType.SessionFinished) {
+								isCompleted = true;
+								this.logger.debug('TTS session finished');
 
-						case EVENT_TTS_RESPONSE:
-							// Audio data
-							audioData.push(payload);
-							this.logger.debug(`Received audio data chunk: ${payload.length} bytes`);
-							break;
+								// Process audio data
+								const fullAudioBuffer = Buffer.concat(audioData);
 
-						case EVENT_TTS_SENTENCE_END:
-							this.logger.debug('TTS sentence end');
-							break;
+								// Save to cache if enabled
+								if (enableCache && fullAudioBuffer.length > 0) {
+									ensureCacheDir(cacheDir);
+									const cachedFilePath = getCachedFilePath(md5Hash, format, cacheDir);
+									fs.writeFileSync(cachedFilePath, fullAudioBuffer);
+									this.logger.info('Audio saved to cache', { filePath: cachedFilePath });
+								}
 
-						case EVENT_SESSION_FINISHED:
-							isCompleted = true;
-							this.logger.debug('TTS session finished');
+								const result: IDataObject = {
+									success: true,
+									message: 'Speech synthesis completed successfully',
+									text: text,
+									speaker: speaker,
+									format: format,
+									sampleRate: sampleRate,
+									audioSize: fullAudioBuffer.length,
+									cached: false,
+								};
 
-							// Process audio data
-							const fullAudioBuffer = Buffer.concat(audioData);
-
-							// Save to cache if enabled
-							if (enableCache && fullAudioBuffer.length > 0) {
-								const cachedFilePath = getCachedFilePath(md5Hash, format, cacheDir);
-								fs.writeFileSync(cachedFilePath, fullAudioBuffer);
-								this.logger.info('Audio saved to cache', { filePath: cachedFilePath });
+								// Process output based on format
+								const output = processAudioOutput(result, fullAudioBuffer, outputFormat, format, index, this);
+								ws.close();
+								resolve(output);
+								return;
 							}
+							break;
 
-							const result: IDataObject = {
-								success: true,
-								message: 'Speech synthesis completed successfully',
-								text: text,
-								speaker: speaker,
-								format: format,
-								sampleRate: sampleRate,
-								audioSize: fullAudioBuffer.length,
-								cached: false,
-							};
-
-							// Process output based on format
-							const output = processAudioOutput(result, fullAudioBuffer, outputFormat, format, index, this);
-							resolve(output);
+						case MsgType.AudioOnlyServer:
+							// Audio data
+							audioData.push(Buffer.from(msg.payload));
+							this.logger.debug(`Received audio data chunk: ${msg.payload.length} bytes`);
 							break;
 
 						default:
-							this.logger.debug(`Unknown event code: ${eventCode}`);
+							this.logger.debug(`Unknown message type: ${msg.type}`);
 					}
-				} catch (error: any) {
-					this.logger.error('Error parsing WebSocket message', { error: error.message });
-					hasError = true;
-					reject(new Error(`Failed to parse WebSocket message: ${error.message}`));
-				}
-			});
 
-			ws.on('close', () => {
-				this.logger.debug('WebSocket connection closed');
-				if (!isCompleted && !hasError) {
-					reject(new Error('WebSocket connection closed unexpectedly'));
+					if (isCompleted) {
+						break;
+					}
 				}
-			});
 
-			ws.on('error', (error: any) => {
-				hasError = true;
+			} catch (error: any) {
 				this.logger.error('WebSocket error', { error: error.message });
 				reject(new Error(`WebSocket error: ${error.message}`));
-			});
-
-			// Set timeout
-			setTimeout(() => {
-				if (!isCompleted && !hasError) {
-					hasError = true;
-					ws.close();
-					reject(new Error('Speech synthesis timeout'));
-				}
-			}, 30000); // 30 seconds timeout
+			}
 		});
 	},
 };

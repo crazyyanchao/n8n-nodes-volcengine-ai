@@ -13,12 +13,13 @@ export class VolcengineAiApi implements ICredentialType {
 
 	properties: INodeProperties[] = [
 		{
-			displayName: 'API Key',
-			name: 'apiKey',
+			displayName: 'Access Token',
+			name: 'accessToken',
 			type: 'string',
 			typeOptions: { password: true },
 			required: true,
 			default: '',
+			description: 'VolcEngine AI Access Token for authentication',
 		}
 	];
 
@@ -26,7 +27,7 @@ export class VolcengineAiApi implements ICredentialType {
 		type: 'generic',
 		properties: {
 			headers: {
-				Authorization: '=Bearer {{$credentials.apiKey}}'
+				'X-Api-Access-Key': '={{$credentials.accessToken}}'
 			},
 		},
 	};
