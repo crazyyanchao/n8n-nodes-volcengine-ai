@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-volcengine-ai",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "description": "n8n custom node for VolcEngine AI services including chat completion and code completion",
   "keywords": [
     "n8n-community-node-package",
@@ -51,22 +51,26 @@
     ]
   },
   "devDependencies": {
+    "@types/glob": "^9.0.0",
     "@types/node": "^24.2.1",
+    "@types/xml-js": "^1.0.0",
     "@typescript-eslint/parser": "~8.36",
     "eslint": "^8.57.1",
     "eslint-plugin-n8n-nodes-base": "^1.16.3",
+    "glob": "^11.0.3",
     "gulp": "^5.0.1",
-    "n8n-workflow": "1.103.0",
     "n8n-nodes-langchain": "1.2.0",
+    "n8n-workflow": "1.103.0",
     "prettier": "^3.6.2",
     "rimraf": "^6.0.1",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "xml-js": "^1.6.11"
   },
   "peerDependencies": {
-    "n8n-workflow": "*",
     "@langchain/community": "*",
     "@langchain/core": "*",
     "@langchain/openai": "*",
+    "n8n-workflow": "*",
     "openai": "*"
   }
 }
