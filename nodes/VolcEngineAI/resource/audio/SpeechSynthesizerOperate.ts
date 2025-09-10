@@ -146,7 +146,7 @@ function processAudioOutput(
 
 const SpeechSynthesizerOperate: ResourceOperations = {
 	name: 'Synthesize Speech',
-	value: 'speechSynthesizer:synthesize',
+	value: 'speechSynthesizer',
 	description: 'Convert text to speech using VolcEngine AI Speech Synthesizer',
 	options: [
 		{
