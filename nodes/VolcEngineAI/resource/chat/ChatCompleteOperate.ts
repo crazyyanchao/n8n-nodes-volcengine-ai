@@ -181,7 +181,7 @@ const ChatCompleteOperate: ResourceOperations = {
 		// Make API request
 		const response = await VolcengineAiRequestUtils.request.call(this, {
 			method: 'POST',
-			url: '/chat/completions',
+			url: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
 			body: requestBody,
 		});
 
