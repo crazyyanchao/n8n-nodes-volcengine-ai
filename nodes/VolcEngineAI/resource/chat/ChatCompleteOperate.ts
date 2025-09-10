@@ -185,17 +185,27 @@ const ChatCompleteOperate: ResourceOperations = {
 			body: requestBody,
 		});
 
+		// Parse response if it's a string
+		let parsedResponse = response;
+		if (typeof response === 'string') {
+			try {
+				parsedResponse = JSON.parse(response);
+			} catch (error) {
+				throw new Error(`Failed to parse API response: ${error.message}`);
+			}
+		}
+
 		// Process response based on simplifyOutput setting
-		if (simplifyOutput && response.choices) {
+		if (simplifyOutput && parsedResponse.choices) {
 			return {
 				success: true,
-				data: response.choices,
-				model: response.model,
-				usage: response.usage,
+				data: parsedResponse.choices,
+				model: parsedResponse.model,
+				usage: parsedResponse.usage,
 			};
 		}
 
-		return response;
+		return parsedResponse;
 	},
 };
 
