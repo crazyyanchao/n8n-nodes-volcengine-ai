@@ -215,19 +215,25 @@ const ImageGenerate: ResourceOperations = {
 		const prompt = this.getNodeParameter('prompt', index) as string;
 		const imageInput = (this.getNodeParameter('image', index) as string || '').trim();
 		const size = this.getNodeParameter('size', index) as string;
-		const sequentialImageGeneration = this.getNodeParameter('sequential_image_generation', index) as string;
-		const maxImages = sequentialImageGeneration === 'auto'
-			? (this.getNodeParameter('max_images', index, 3, { extractValue: true }) as number)
-			: undefined;
+		// Safe getters to avoid "Could not find property" when fields are hidden/not present
+		const getParam = <T>(name: string, def: T): T => {
+			try { return this.getNodeParameter(name, index) as T; } catch { return def; }
+		};
+		const getParamExtract = <T>(name: string, def: T): T => {
+			try { return this.getNodeParameter(name, index, def as any, { extractValue: true }) as T; } catch { return def; }
+		};
+
+		const sequentialImageGeneration = getParam<string>('sequential_image_generation', 'disabled');
+		const maxImages = sequentialImageGeneration === 'auto' ? getParamExtract<number>('max_images', 3) : undefined;
 		// stream removed
-		const watermark = this.getNodeParameter('watermark', index) as boolean;
-		const seed = this.getNodeParameter('seed', index, -1, { extractValue: true }) as number;
-		const guidanceScale = this.getNodeParameter('guidance_scale', index, 0, { extractValue: true }) as number;
-		const outputFormat = this.getNodeParameter('outputFormat', index) as string;
-		const enableCache = this.getNodeParameter('enableCache', index) as boolean;
-		const cacheKeySettings = this.getNodeParameter('cacheKeySettings', index, {}) as IDataObject;
-		const cacheDir = enableCache ? (this.getNodeParameter('cacheDir', index) as string) : './cache/image';
-		const outputFilePath = outputFormat === 'file' ? (this.getNodeParameter('outputFilePath', index) as string) : './output/image.jpg';
+		const watermark = getParam<boolean>('watermark', true);
+		const seed = getParamExtract<number>('seed', -1);
+		const guidanceScale = getParamExtract<number>('guidance_scale', 0);
+		const outputFormat = getParam<string>('outputFormat', 'url');
+		const enableCache = getParam<boolean>('enableCache', false);
+		const cacheKeySettings = getParam<IDataObject>('cacheKeySettings', {});
+		const cacheDir = enableCache ? getParam<string>('cacheDir', './cache/image') : './cache/image';
+		const outputFilePath = outputFormat === 'file' ? getParam<string>('outputFilePath', './output/image.jpg') : './output/image.jpg';
 
 		let image: string | string[] | undefined = undefined;
 		if (imageInput) {
