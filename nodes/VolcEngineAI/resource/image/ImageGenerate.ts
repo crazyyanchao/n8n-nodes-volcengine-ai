@@ -262,10 +262,8 @@ const ImageGenerate: ResourceOperations = {
 		}
 
 		// Cache pre-check (skip API if cached and output is not URL)
-		let absoluteCacheDir = cacheDir;
 		if (enableCache && outputFormat !== 'url') {
-			// 使用相对目录（不强制解析为绝对路径）
-			ensureCacheDir(absoluteCacheDir);
+			ensureCacheDir(cacheDir);
 			const cacheKeyMode = cacheKeySettings?.cacheKeyMode || 'auto';
 			let cacheKey = '';
 			if (cacheKeyMode === 'custom') {
@@ -279,7 +277,7 @@ const ImageGenerate: ResourceOperations = {
 			// try to read cached files (continuous indices)
 			const cachedBuffers: Buffer[] = [];
 			for (let i = 0; i < 100; i++) {
-				const filePath = getCachedFilePath(cacheKey, i, 'jpg', absoluteCacheDir);
+				const filePath = getCachedFilePath(cacheKey, i, 'jpg', cacheDir);
 				if (fs.existsSync(filePath)) {
 					cachedBuffers.push(fs.readFileSync(filePath));
 				} else {
@@ -315,7 +313,7 @@ const ImageGenerate: ResourceOperations = {
 					const filePaths: string[] = [];
 					cachedBuffers.forEach((buf, idx) => {
 						const numberedName = cachedBuffers.length > 1 ? `${parsed.name}_${idx}${parsed.ext || '.jpg'}` : `${parsed.name}${parsed.ext || '.jpg'}`;
-						const fullPath = path.join(parsed.dir, numberedName);
+						const fullPath = parsed.dir ? path.join(parsed.dir, numberedName) : numberedName;
 						fs.writeFileSync(fullPath, buf);
 						filePaths.push(fullPath);
 					});
@@ -368,10 +366,9 @@ const ImageGenerate: ResourceOperations = {
 				const additionalParams = cacheKeySettings?.additionalParams || '';
 				cacheKey = generateMD5FromParams({ model, prompt, image, size, sequentialImageGeneration, maxImages, watermark, seed, guidanceScale, additionalParams });
 			}
-			const cachePath = cacheDir;
-			ensureCacheDir(cachePath);
+			ensureCacheDir(cacheDir);
 			imageBuffers.forEach((buf, idx) => {
-				const cachedFilePath = getCachedFilePath(cacheKey, idx, 'jpg', cachePath);
+				const cachedFilePath = getCachedFilePath(cacheKey, idx, 'jpg', cacheDir);
 				fs.writeFileSync(cachedFilePath, buf);
 			});
 		}
@@ -409,7 +406,7 @@ const ImageGenerate: ResourceOperations = {
 			const filePaths: string[] = [];
 			imageBuffers.forEach((buf, idx) => {
 				const numberedName = imageBuffers.length > 1 ? `${parsed.name}_${idx}${parsed.ext || `.${imageFormat}`}` : `${parsed.name}${parsed.ext || `.${imageFormat}`}`;
-				const fullPath = path.join(parsed.dir, numberedName);
+				const fullPath = parsed.dir ? path.join(parsed.dir, numberedName) : numberedName;
 				fs.writeFileSync(fullPath, buf);
 				filePaths.push(fullPath);
 			});
