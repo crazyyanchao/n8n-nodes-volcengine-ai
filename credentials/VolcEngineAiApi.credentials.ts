@@ -20,6 +20,17 @@ export class VolcengineAiApi implements ICredentialType {
 			required: true,
 			default: '',
 			description: 'VolcEngine AI Access Token for authentication',
+		},
+		{
+			displayName: 'Auth Type',
+			name: 'authType',
+			type: 'options',
+			default: 'bearer',
+			description: 'Select which HTTP header to use for authentication',
+			options: [
+				{ name: 'Authorization: Bearer <token>', value: 'bearer' },
+				{ name: 'X-Api-Access-Key: <token>', value: 'x-api-key' },
+			],
 		}
 	];
 
@@ -27,7 +38,8 @@ export class VolcengineAiApi implements ICredentialType {
 		type: 'generic',
 		properties: {
 			headers: {
-				'X-Api-Access-Key': '={{$credentials.accessToken}}'
+				Authorization: '={{$credentials.authType === "bearer" ? ("Bearer " + $credentials.accessToken) : undefined}}',
+				'X-Api-Access-Key': '={{$credentials.authType === "x-api-key" ? $credentials.accessToken : undefined}}',
 			},
 		},
 	};
