@@ -302,12 +302,19 @@ export class VolcengineAiChain implements INodeType {
 			reasoningEffort?: 'low' | 'medium' | 'high';
 		};
 
+		const authType = (credentials.authType as string) || 'bearer';
+		const accessToken = (credentials.accessToken as string) || '';
+
 		const configuration: ClientOptions = {
 			baseURL: options.baseURL || 'https://ark.cn-beijing.volces.com/api/v3',
+			// When using X-Api-Access-Key, add it as a default header
+			// OpenAI SDK still requires a non-empty apiKey, so we pass accessToken below
+			// Authorization header will be set by the sdk; Ark accepts Bearer as well
+			defaultHeaders: authType === 'x-api-key' ? { 'X-Api-Access-Key': accessToken } : undefined,
 		};
 
 		const model = new ChatOpenAI({
-			apiKey: credentials.apiKey as string,
+			apiKey: accessToken,
 			model: modelName,
 			...options,
 			timeout: options.timeout ?? 60000,
