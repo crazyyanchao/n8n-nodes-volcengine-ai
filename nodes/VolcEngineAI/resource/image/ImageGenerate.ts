@@ -127,6 +127,20 @@ const ImageGenerate: ResourceOperations = {
 			displayOptions: { show: { model: ['doubao-seedream-3-0-t2i-250415', 'doubao-seededit-3-0-i2i-250628'] } },
 		},
 		{
+			displayName: 'Image Format',
+			name: 'imageFormat',
+			type: 'options',
+			options: [
+				{ name: 'BMP', value: 'bmp' },
+				{ name: 'GIF', value: 'gif' },
+				{ name: 'JPEG', value: 'jpg' },
+				{ name: 'PNG', value: 'png' },
+				{ name: 'WebP', value: 'webp' },
+			],
+			default: 'jpg',
+			description: 'Output image format for generated images',
+		},
+		{
 			displayName: 'Output Format',
 			name: 'outputFormat',
 			type: 'options',
@@ -238,14 +252,16 @@ const ImageGenerate: ResourceOperations = {
 		const watermark = getParam<boolean>('watermark', true);
 		const seed = getParamExtract<number>('seed', -1);
 		const guidanceScale = getParamExtract<number>('guidance_scale', 0);
+		const imageFormat = getParam<string>('imageFormat', 'jpg');
 		const outputFormat = getParam<string>('outputFormat', 'url');
 		const enableCache = getParam<boolean>('enableCache', false);
 		const cacheKeySettings = getParam<IDataObject>('cacheKeySettings', {});
 		const cacheDir = enableCache ? getParam<string>('cacheDir', './cache/image') : './cache/image';
-		const outputFilePath = outputFormat === 'file' ? getParam<string>('outputFilePath', './output/image.jpg') : './output/image.jpg';
+		const outputFilePath = outputFormat === 'file' ? getParam<string>('outputFilePath', `./output/image.${imageFormat}`) : `./output/image.${imageFormat}`;
 
 		this.logger.info('Output configuration', {
 			outputFormat,
+			imageFormat,
 			enableCache,
 			cacheDir,
 			outputFilePath
@@ -277,8 +293,8 @@ const ImageGenerate: ResourceOperations = {
 			// stream removed
 		}
 
-		// Cache pre-check (skip API if cached and output is not URL)
-		if (enableCache && outputFormat !== 'url') {
+		// Cache pre-check (skip API if cached)
+		if (enableCache) {
 			ensureCacheDir(cacheDir);
 			const cacheKeyMode = cacheKeySettings?.cacheKeyMode || 'auto';
 			let cacheKey = '';
@@ -288,12 +304,12 @@ const ImageGenerate: ResourceOperations = {
 				cacheKey = calculateMD5 ? crypto.createHash('md5').update(customCacheKey).digest('hex') : customCacheKey;
 			} else {
 				const additionalParams = cacheKeySettings?.additionalParams || '';
-				cacheKey = generateMD5FromParams({ model, prompt, image, size, sequentialImageGeneration, maxImages, watermark, seed, guidanceScale, additionalParams });
+				cacheKey = generateMD5FromParams({ model, prompt, image, size, sequentialImageGeneration, maxImages, watermark, seed, guidanceScale, imageFormat, additionalParams });
 			}
 			// try to read cached files (continuous indices)
 			const cachedBuffers: Buffer[] = [];
 			for (let i = 0; i < 100; i++) {
-				const filePath = getCachedFilePath(cacheKey, i, 'jpg', cacheDir);
+				const filePath = getCachedFilePath(cacheKey, i, imageFormat, cacheDir);
 				if (fs.existsSync(filePath)) {
 					cachedBuffers.push(fs.readFileSync(filePath));
 				} else {
@@ -302,21 +318,43 @@ const ImageGenerate: ResourceOperations = {
 			}
 			if (cachedBuffers.length > 0) {
 				// Return from cache
-				if (outputFormat === 'base64' || outputFormat === 'json') {
+				if (outputFormat === 'url') {
+					// For URL mode, we need to return URLs but also indicate cached status
+					// Since we can't reconstruct the original URLs from cached files,
+					// we'll return a special indicator that these are cached images
+					const images = cachedBuffers.map((buf, idx) => ({
+						url: `cached://image_${idx}.${imageFormat}`
+					}));
+					return { model, created: undefined, images, usage: undefined, raw: { cached: true }};
+				}
+				if (outputFormat === 'base64') {
 					const imagesBase64 = cachedBuffers.map((b) => b.toString('base64'));
-					return { model, created: undefined, imagesBase64, usage: undefined, raw: { cached: true }};
+					return { model, imagesBase64, raw: { cached: true }};
+				}
+				if (outputFormat === 'json') {
+					// For Complete JSON mode, return the full response structure with cached data
+					const imagesBase64 = cachedBuffers.map((b) => b.toString('base64'));
+					const data = imagesBase64.map((b64, idx) => ({
+						b64_json: b64
+					}));
+					return {
+						model,
+						data,
+						raw: { cached: true }
+					};
 				}
 				if (outputFormat === 'buffer') {
-					const imagesBufferInfo = cachedBuffers.map((b) => ({ length: b.length, type: 'jpg' }));
-					return { model, created: undefined, imagesBufferInfo, usage: undefined, raw: { cached: true }};
+					const imagesBufferInfo = cachedBuffers.map((b) => ({ length: b.length, type: imageFormat }));
+					return { model, imagesBufferInfo, raw: { cached: true }};
 				}
 				if (outputFormat === 'binary') {
 					const binary: Record<string, any> = {};
 					cachedBuffers.forEach((buf, idx) => {
+						const mimeType = imageFormat === 'jpg' ? 'image/jpeg' : `image/${imageFormat}`;
 						binary[`image${idx}`] = {
 							data: buf.toString('base64'),
-							mimeType: 'image/jpeg',
-							fileName: `cached_image_${idx}.jpg`,
+							mimeType,
+							fileName: `cached_image_${idx}.${imageFormat}`,
 							fileSize: String(buf.length),
 						};
 					});
@@ -328,7 +366,7 @@ const ImageGenerate: ResourceOperations = {
 					if (parsed.dir && !fs.existsSync(parsed.dir)) fs.mkdirSync(parsed.dir, { recursive: true });
 					const filePaths: string[] = [];
 					cachedBuffers.forEach((buf, idx) => {
-						const numberedName = cachedBuffers.length > 1 ? `${parsed.name}_${idx}${parsed.ext || '.jpg'}` : `${parsed.name}${parsed.ext || '.jpg'}`;
+						const numberedName = cachedBuffers.length > 1 ? `${parsed.name}_${idx}${parsed.ext || `.${imageFormat}`}` : `${parsed.name}${parsed.ext || `.${imageFormat}`}`;
 						const fullPath = parsed.dir ? path.join(parsed.dir, numberedName) : numberedName;
 						fs.writeFileSync(fullPath, buf);
 						filePaths.push(fullPath);
@@ -339,7 +377,8 @@ const ImageGenerate: ResourceOperations = {
 		}
 
 		// Choose response_format based on output requirement
-		const effectiveResponseFormat: 'url' | 'b64_json' = outputFormat === 'url' ? 'url' : 'b64_json';
+		// If cache is enabled, always request b64_json to enable caching
+		const effectiveResponseFormat: 'url' | 'b64_json' = (outputFormat === 'url' && !enableCache) ? 'url' : 'b64_json';
 		body.response_format = effectiveResponseFormat;
 
 		this.logger.info('Making API request to Volcengine AI', {
@@ -377,8 +416,20 @@ const ImageGenerate: ResourceOperations = {
 		const usage = (res as any)?.usage;
 
 		if (outputFormat === 'url') {
-			const images = dataArray.filter((d) => d && d.url).map((d) => ({ url: d.url, size: d.size }));
-			this.logger.info('Returning URL format result', { imageCount: images.length });
+			// If cache is enabled, we might have b64_json data instead of URL data
+			let images: any[] = [];
+			if (enableCache && dataArray.some(d => d && d.b64_json)) {
+				// We have base64 data, but user wants URL format
+				// We'll return placeholder URLs since we can't reconstruct original URLs
+				images = dataArray.filter((d) => d && (d.url || d.b64_json)).map((d, idx) => ({
+					url: d.url || `generated://image_${idx}.${imageFormat}`,
+					size: d.size || 'unknown'
+				}));
+			} else {
+				// Normal URL mode - we have actual URLs
+				images = dataArray.filter((d) => d && d.url).map((d) => ({ url: d.url, size: d.size }));
+			}
+			this.logger.info('Returning URL format result', { imageCount: images.length, cacheEnabled: enableCache });
 			return { model: modelId, created, images, usage, raw: res};
 		}
 
@@ -439,14 +490,14 @@ const ImageGenerate: ResourceOperations = {
 				cacheKey = calculateMD5 ? crypto.createHash('md5').update(customCacheKey).digest('hex') : customCacheKey;
 			} else {
 				const additionalParams = cacheKeySettings?.additionalParams || '';
-				cacheKey = generateMD5FromParams({ model, prompt, image, size, sequentialImageGeneration, maxImages, watermark, seed, guidanceScale, additionalParams });
+				cacheKey = generateMD5FromParams({ model, prompt, image, size, sequentialImageGeneration, maxImages, watermark, seed, guidanceScale, imageFormat, additionalParams });
 			}
 
 			this.logger.info('Cache configuration', { cacheKey, cacheDir });
 			ensureCacheDir(cacheDir);
 
 			imageBuffers.forEach((buf, idx) => {
-				const cachedFilePath = getCachedFilePath(cacheKey, idx, 'jpg', cacheDir);
+				const cachedFilePath = getCachedFilePath(cacheKey, idx, imageFormat, cacheDir);
 				try {
 					fs.writeFileSync(cachedFilePath, buf);
 					this.logger.info(`Cached image ${idx + 1}`, {
@@ -464,7 +515,6 @@ const ImageGenerate: ResourceOperations = {
 		}
 
 		const baseResult: IDataObject = { model: modelId, created, usage };
-		const imageFormat = 'jpg';
 
 		if (outputFormat === 'base64') {
 			const imagesBase64 = imageBuffers.map((b) => b.toString('base64'));
@@ -479,9 +529,10 @@ const ImageGenerate: ResourceOperations = {
 		if (outputFormat === 'binary') {
 			const binary: Record<string, any> = {};
 			imageBuffers.forEach((buf, idx) => {
+				const mimeType = imageFormat === 'jpg' ? 'image/jpeg' : `image/${imageFormat}`;
 				binary[`image${idx}`] = {
 					data: buf.toString('base64'),
-					mimeType: `image/${imageFormat}`,
+					mimeType,
 					fileName: `generated_image_${idx}.${imageFormat}`,
 					fileSize: String(buf.length),
 				};
