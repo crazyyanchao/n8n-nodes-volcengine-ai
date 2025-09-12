@@ -216,7 +216,9 @@ const ImageGenerate: ResourceOperations = {
 		const imageInput = (this.getNodeParameter('image', index) as string || '').trim();
 		const size = this.getNodeParameter('size', index) as string;
 		const sequentialImageGeneration = this.getNodeParameter('sequential_image_generation', index) as string;
-		const maxImages = this.getNodeParameter('max_images', index, undefined, { extractValue: true }) as number | undefined;
+		const maxImages = sequentialImageGeneration === 'auto'
+			? (this.getNodeParameter('max_images', index, 3, { extractValue: true }) as number)
+			: undefined;
 		// stream removed
 		const watermark = this.getNodeParameter('watermark', index) as boolean;
 		const seed = this.getNodeParameter('seed', index, -1, { extractValue: true }) as number;
