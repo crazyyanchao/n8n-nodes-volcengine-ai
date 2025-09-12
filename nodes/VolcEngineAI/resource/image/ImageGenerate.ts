@@ -1,4 +1,4 @@
-import { IDataObject, IExecuteFunctions } from 'n8n-workflow';
+import { IDataObject, IExecuteFunctions, NodeOperationError } from 'n8n-workflow';
 import { ResourceOperations } from '../../help/type/IResource';
 import VolcengineAiRequestUtils from '../../utils/VolcengineAiRequestUtils';
 import * as crypto from 'crypto';
@@ -218,7 +218,7 @@ const ImageGenerate: ResourceOperations = {
 		const imageInput = (this.getNodeParameter('image', index) as string || '').trim();
 		const size = this.getNodeParameter('size', index) as string;
 
-		this.logger.debug('Image generation parameters', {
+		this.logger.info('Image generation parameters', {
 			model,
 			prompt: prompt.substring(0, 100) + (prompt.length > 100 ? '...' : ''),
 			imageInput: imageInput ? 'provided' : 'empty',
@@ -244,7 +244,7 @@ const ImageGenerate: ResourceOperations = {
 		const cacheDir = enableCache ? getParam<string>('cacheDir', './cache/image') : './cache/image';
 		const outputFilePath = outputFormat === 'file' ? getParam<string>('outputFilePath', './output/image.jpg') : './output/image.jpg';
 
-		this.logger.debug('Output configuration', {
+		this.logger.info('Output configuration', {
 			outputFormat,
 			enableCache,
 			cacheDir,
@@ -348,13 +348,23 @@ const ImageGenerate: ResourceOperations = {
 			bodyKeys: Object.keys(body)
 		});
 
-		const res = await VolcengineAiRequestUtils.request.call(this, {
+		const response = await VolcengineAiRequestUtils.request.call(this, {
 			method: 'POST',
 			url: 'https://ark.cn-beijing.volces.com/api/v3/images/generations',
 			body,
 		});
 
-		this.logger.debug('API response received', {
+		// Parse response if it's a string
+		let res = response;
+		if (typeof response === 'string') {
+			try {
+				res = JSON.parse(response);
+			} catch (error) {
+				throw new NodeOperationError(this.getNode(), 'Failed to parse API response as JSON');
+			}
+		}
+
+		this.logger.info('API response received', {
 			hasData: !!(res as any)?.data,
 			dataLength: Array.isArray((res as any)?.data) ? (res as any).data.length : 0,
 			model: (res as any)?.model,
@@ -386,20 +396,20 @@ const ImageGenerate: ResourceOperations = {
 		const imageBuffers: Buffer[] = [];
 		for (let i = 0; i < dataArray.length; i++) {
 			const item = dataArray[i];
-			this.logger.debug(`Processing image ${i + 1}/${dataArray.length}`, {
+			this.logger.info(`Processing image ${i + 1}/${dataArray.length}`, {
 				hasB64: !!item?.b64_json,
 				hasUrl: !!item?.url,
 				size: item?.size
 			});
 
 			if (item?.b64_json) {
-				this.logger.debug(`Using base64 data for image ${i + 1}`);
+				this.logger.info(`Using base64 data for image ${i + 1}`);
 				imageBuffers.push(Buffer.from(item.b64_json, 'base64'));
 			} else if (item?.url) {
 				this.logger.info(`Downloading image ${i + 1} from URL`, { url: item.url });
 				try {
 					const buf = await downloadImage(item.url);
-					this.logger.debug(`Downloaded image ${i + 1}`, { size: buf.length });
+					this.logger.info(`Downloaded image ${i + 1}`, { size: buf.length });
 					imageBuffers.push(buf);
 				} catch (error: any) {
 					this.logger.error(`Failed to download image ${i + 1}`, {
@@ -432,14 +442,14 @@ const ImageGenerate: ResourceOperations = {
 				cacheKey = generateMD5FromParams({ model, prompt, image, size, sequentialImageGeneration, maxImages, watermark, seed, guidanceScale, additionalParams });
 			}
 
-			this.logger.debug('Cache configuration', { cacheKey, cacheDir });
+			this.logger.info('Cache configuration', { cacheKey, cacheDir });
 			ensureCacheDir(cacheDir);
 
 			imageBuffers.forEach((buf, idx) => {
 				const cachedFilePath = getCachedFilePath(cacheKey, idx, 'jpg', cacheDir);
 				try {
 					fs.writeFileSync(cachedFilePath, buf);
-					this.logger.debug(`Cached image ${idx + 1}`, {
+					this.logger.info(`Cached image ${idx + 1}`, {
 						filePath: cachedFilePath,
 						size: buf.length
 					});
@@ -489,7 +499,7 @@ const ImageGenerate: ResourceOperations = {
 
 			// Ensure output directory exists
 			if (parsed.dir && !fs.existsSync(parsed.dir)) {
-				this.logger.debug('Creating output directory', { dir: parsed.dir });
+				this.logger.info('Creating output directory', { dir: parsed.dir });
 				fs.mkdirSync(parsed.dir, { recursive: true });
 			}
 
@@ -502,7 +512,7 @@ const ImageGenerate: ResourceOperations = {
 
 				try {
 					fs.writeFileSync(fullPath, buf);
-					this.logger.debug(`Saved image ${idx + 1}`, {
+					this.logger.info(`Saved image ${idx + 1}`, {
 						filePath: fullPath,
 						size: buf.length
 					});
