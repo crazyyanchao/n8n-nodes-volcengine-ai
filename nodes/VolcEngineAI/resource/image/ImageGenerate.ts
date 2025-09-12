@@ -211,10 +211,19 @@ const ImageGenerate: ResourceOperations = {
 		},
 	],
 	async call(this: IExecuteFunctions, index: number): Promise<IDataObject> {
+		this.logger.info('Starting image generation process', { index });
+
 		const model = this.getNodeParameter('model', index) as string;
 		const prompt = this.getNodeParameter('prompt', index) as string;
 		const imageInput = (this.getNodeParameter('image', index) as string || '').trim();
 		const size = this.getNodeParameter('size', index) as string;
+
+		this.logger.debug('Image generation parameters', {
+			model,
+			prompt: prompt.substring(0, 100) + (prompt.length > 100 ? '...' : ''),
+			imageInput: imageInput ? 'provided' : 'empty',
+			size
+		});
 		// Safe getters to avoid "Could not find property" when fields are hidden/not present
 		const getParam = <T>(name: string, def: T): T => {
 			try { return this.getNodeParameter(name, index) as T; } catch { return def; }
@@ -234,6 +243,13 @@ const ImageGenerate: ResourceOperations = {
 		const cacheKeySettings = getParam<IDataObject>('cacheKeySettings', {});
 		const cacheDir = enableCache ? getParam<string>('cacheDir', './cache/image') : './cache/image';
 		const outputFilePath = outputFormat === 'file' ? getParam<string>('outputFilePath', './output/image.jpg') : './output/image.jpg';
+
+		this.logger.debug('Output configuration', {
+			outputFormat,
+			enableCache,
+			cacheDir,
+			outputFilePath
+		});
 
 		let image: string | string[] | undefined = undefined;
 		if (imageInput) {
@@ -326,10 +342,23 @@ const ImageGenerate: ResourceOperations = {
 		const effectiveResponseFormat: 'url' | 'b64_json' = outputFormat === 'url' ? 'url' : 'b64_json';
 		body.response_format = effectiveResponseFormat;
 
+		this.logger.info('Making API request to Volcengine AI', {
+			url: 'https://ark.cn-beijing.volces.com/api/v3/images/generations',
+			responseFormat: effectiveResponseFormat,
+			bodyKeys: Object.keys(body)
+		});
+
 		const res = await VolcengineAiRequestUtils.request.call(this, {
 			method: 'POST',
 			url: 'https://ark.cn-beijing.volces.com/api/v3/images/generations',
 			body,
+		});
+
+		this.logger.debug('API response received', {
+			hasData: !!(res as any)?.data,
+			dataLength: Array.isArray((res as any)?.data) ? (res as any).data.length : 0,
+			model: (res as any)?.model,
+			created: (res as any)?.created
 		});
 
 		const dataArray: any[] = Array.isArray((res as any)?.data) ? (res as any).data : [];
@@ -339,23 +368,59 @@ const ImageGenerate: ResourceOperations = {
 
 		if (outputFormat === 'url') {
 			const images = dataArray.filter((d) => d && d.url).map((d) => ({ url: d.url, size: d.size }));
+			this.logger.info('Returning URL format result', { imageCount: images.length });
 			return { model: modelId, created, images, usage, raw: res};
 		}
 
+		// For Complete JSON mode, return the raw response directly
+		if (outputFormat === 'json') {
+			this.logger.info('Returning complete JSON response', {
+				hasData: !!(res as any)?.data,
+				dataLength: dataArray.length
+			});
+			return res as IDataObject;
+		}
+
 		// Build buffers for all images
+		this.logger.info('Processing images', { totalImages: dataArray.length });
 		const imageBuffers: Buffer[] = [];
 		for (let i = 0; i < dataArray.length; i++) {
 			const item = dataArray[i];
+			this.logger.debug(`Processing image ${i + 1}/${dataArray.length}`, {
+				hasB64: !!item?.b64_json,
+				hasUrl: !!item?.url,
+				size: item?.size
+			});
+
 			if (item?.b64_json) {
+				this.logger.debug(`Using base64 data for image ${i + 1}`);
 				imageBuffers.push(Buffer.from(item.b64_json, 'base64'));
 			} else if (item?.url) {
-				const buf = await downloadImage(item.url);
-				imageBuffers.push(buf);
+				this.logger.info(`Downloading image ${i + 1} from URL`, { url: item.url });
+				try {
+					const buf = await downloadImage(item.url);
+					this.logger.debug(`Downloaded image ${i + 1}`, { size: buf.length });
+					imageBuffers.push(buf);
+				} catch (error: any) {
+					this.logger.error(`Failed to download image ${i + 1}`, {
+						url: item.url,
+						error: error.message
+					});
+					throw new Error(`Failed to download image ${i + 1}: ${error.message}`);
+				}
+			} else {
+				this.logger.warn(`Image ${i + 1} has no valid data`, { item });
 			}
 		}
 
+		this.logger.info('Image processing completed', {
+			processedImages: imageBuffers.length,
+			totalImages: dataArray.length
+		});
+
 		// Save to cache if enabled
 		if (enableCache && imageBuffers.length > 0) {
+			this.logger.info('Saving images to cache', { imageCount: imageBuffers.length });
 			const cacheKeyMode = cacheKeySettings?.cacheKeyMode || 'auto';
 			let cacheKey = '';
 			if (cacheKeyMode === 'custom') {
@@ -366,11 +431,26 @@ const ImageGenerate: ResourceOperations = {
 				const additionalParams = cacheKeySettings?.additionalParams || '';
 				cacheKey = generateMD5FromParams({ model, prompt, image, size, sequentialImageGeneration, maxImages, watermark, seed, guidanceScale, additionalParams });
 			}
+
+			this.logger.debug('Cache configuration', { cacheKey, cacheDir });
 			ensureCacheDir(cacheDir);
+
 			imageBuffers.forEach((buf, idx) => {
 				const cachedFilePath = getCachedFilePath(cacheKey, idx, 'jpg', cacheDir);
-				fs.writeFileSync(cachedFilePath, buf);
+				try {
+					fs.writeFileSync(cachedFilePath, buf);
+					this.logger.debug(`Cached image ${idx + 1}`, {
+						filePath: cachedFilePath,
+						size: buf.length
+					});
+				} catch (error: any) {
+					this.logger.error(`Failed to cache image ${idx + 1}`, {
+						filePath: cachedFilePath,
+						error: error.message
+					});
+				}
 			});
+			this.logger.info('Cache save completed', { cachedImages: imageBuffers.length });
 		}
 
 		const baseResult: IDataObject = { model: modelId, created, usage };
@@ -400,16 +480,43 @@ const ImageGenerate: ResourceOperations = {
 		}
 
 		if (outputFormat === 'file') {
+			this.logger.info('Saving images to files', {
+				outputPath: outputFilePath,
+				imageCount: imageBuffers.length
+			});
 			const outPath = outputFilePath;
 			const parsed = path.parse(outPath);
-			if (parsed.dir && !fs.existsSync(parsed.dir)) fs.mkdirSync(parsed.dir, { recursive: true });
+
+			// Ensure output directory exists
+			if (parsed.dir && !fs.existsSync(parsed.dir)) {
+				this.logger.debug('Creating output directory', { dir: parsed.dir });
+				fs.mkdirSync(parsed.dir, { recursive: true });
+			}
+
 			const filePaths: string[] = [];
 			imageBuffers.forEach((buf, idx) => {
-				const numberedName = imageBuffers.length > 1 ? `${parsed.name}_${idx}${parsed.ext || `.${imageFormat}`}` : `${parsed.name}${parsed.ext || `.${imageFormat}`}`;
+				const numberedName = imageBuffers.length > 1 ?
+					`${parsed.name}_${idx}${parsed.ext || `.${imageFormat}`}` :
+					`${parsed.name}${parsed.ext || `.${imageFormat}`}`;
 				const fullPath = parsed.dir ? path.join(parsed.dir, numberedName) : numberedName;
-				fs.writeFileSync(fullPath, buf);
-				filePaths.push(fullPath);
+
+				try {
+					fs.writeFileSync(fullPath, buf);
+					this.logger.debug(`Saved image ${idx + 1}`, {
+						filePath: fullPath,
+						size: buf.length
+					});
+					filePaths.push(fullPath);
+				} catch (error: any) {
+					this.logger.error(`Failed to save image ${idx + 1}`, {
+						filePath: fullPath,
+						error: error.message
+					});
+					throw new Error(`Failed to save image ${idx + 1}: ${error.message}`);
+				}
 			});
+
+			this.logger.info('File save completed', { savedFiles: filePaths.length });
 			return { ...baseResult, filePaths, raw: res};
 		}
 
