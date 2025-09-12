@@ -264,7 +264,7 @@ const ImageGenerate: ResourceOperations = {
 		// Cache pre-check (skip API if cached and output is not URL)
 		let absoluteCacheDir = cacheDir;
 		if (enableCache && outputFormat !== 'url') {
-			absoluteCacheDir = path.isAbsolute(cacheDir) ? cacheDir : path.resolve(process.cwd(), cacheDir);
+			// 使用相对目录（不强制解析为绝对路径）
 			ensureCacheDir(absoluteCacheDir);
 			const cacheKeyMode = cacheKeySettings?.cacheKeyMode || 'auto';
 			let cacheKey = '';
@@ -290,11 +290,11 @@ const ImageGenerate: ResourceOperations = {
 				// Return from cache
 				if (outputFormat === 'base64' || outputFormat === 'json') {
 					const imagesBase64 = cachedBuffers.map((b) => b.toString('base64'));
-					return { model, created: undefined, imagesBase64, usage: undefined, raw: { cached: true } as any };
+					return { model, created: undefined, imagesBase64, usage: undefined, raw: { cached: true }};
 				}
 				if (outputFormat === 'buffer') {
 					const imagesBufferInfo = cachedBuffers.map((b) => ({ length: b.length, type: 'jpg' }));
-					return { model, created: undefined, imagesBufferInfo, usage: undefined, raw: { cached: true } as any };
+					return { model, created: undefined, imagesBufferInfo, usage: undefined, raw: { cached: true }};
 				}
 				if (outputFormat === 'binary') {
 					const binary: Record<string, any> = {};
@@ -309,9 +309,9 @@ const ImageGenerate: ResourceOperations = {
 					return { json: { model, cached: true }, binary, pairedItem: { item: index } } as unknown as IDataObject;
 				}
 				if (outputFormat === 'file') {
-					const absOut = path.isAbsolute(outputFilePath) ? outputFilePath : path.resolve(process.cwd(), outputFilePath);
-					const parsed = path.parse(absOut);
-					if (!fs.existsSync(parsed.dir)) fs.mkdirSync(parsed.dir, { recursive: true });
+					const outPath = outputFilePath;
+					const parsed = path.parse(outPath);
+					if (parsed.dir && !fs.existsSync(parsed.dir)) fs.mkdirSync(parsed.dir, { recursive: true });
 					const filePaths: string[] = [];
 					cachedBuffers.forEach((buf, idx) => {
 						const numberedName = cachedBuffers.length > 1 ? `${parsed.name}_${idx}${parsed.ext || '.jpg'}` : `${parsed.name}${parsed.ext || '.jpg'}`;
@@ -319,7 +319,7 @@ const ImageGenerate: ResourceOperations = {
 						fs.writeFileSync(fullPath, buf);
 						filePaths.push(fullPath);
 					});
-					return { model, filePaths, raw: { cached: true } as any };
+					return { model, filePaths, raw: { cached: true }};
 				}
 			}
 		}
@@ -341,7 +341,7 @@ const ImageGenerate: ResourceOperations = {
 
 		if (outputFormat === 'url') {
 			const images = dataArray.filter((d) => d && d.url).map((d) => ({ url: d.url, size: d.size }));
-			return { model: modelId, created, images, usage, raw: res as any };
+			return { model: modelId, created, images, usage, raw: res};
 		}
 
 		// Build buffers for all images
@@ -368,10 +368,10 @@ const ImageGenerate: ResourceOperations = {
 				const additionalParams = cacheKeySettings?.additionalParams || '';
 				cacheKey = generateMD5FromParams({ model, prompt, image, size, sequentialImageGeneration, maxImages, watermark, seed, guidanceScale, additionalParams });
 			}
-			const absoluteCachePath = path.isAbsolute(cacheDir) ? cacheDir : path.resolve(process.cwd(), cacheDir);
-			ensureCacheDir(absoluteCachePath);
+			const cachePath = cacheDir;
+			ensureCacheDir(cachePath);
 			imageBuffers.forEach((buf, idx) => {
-				const cachedFilePath = getCachedFilePath(cacheKey, idx, 'jpg', absoluteCachePath);
+				const cachedFilePath = getCachedFilePath(cacheKey, idx, 'jpg', cachePath);
 				fs.writeFileSync(cachedFilePath, buf);
 			});
 		}
@@ -381,12 +381,12 @@ const ImageGenerate: ResourceOperations = {
 
 		if (outputFormat === 'base64') {
 			const imagesBase64 = imageBuffers.map((b) => b.toString('base64'));
-			return { ...baseResult, imagesBase64, raw: res as any };
+			return { ...baseResult, imagesBase64, raw: res};
 		}
 
 		if (outputFormat === 'buffer') {
 			const imagesBufferInfo = imageBuffers.map((b) => ({ length: b.length, type: imageFormat }));
-			return { ...baseResult, imagesBufferInfo, raw: res as any };
+			return { ...baseResult, imagesBufferInfo, raw: res};
 		}
 
 		if (outputFormat === 'binary') {
@@ -403,9 +403,9 @@ const ImageGenerate: ResourceOperations = {
 		}
 
 		if (outputFormat === 'file') {
-			const absOut = path.isAbsolute(outputFilePath) ? outputFilePath : path.resolve(process.cwd(), outputFilePath);
-			const parsed = path.parse(absOut);
-			if (!fs.existsSync(parsed.dir)) fs.mkdirSync(parsed.dir, { recursive: true });
+			const outPath = outputFilePath;
+			const parsed = path.parse(outPath);
+			if (parsed.dir && !fs.existsSync(parsed.dir)) fs.mkdirSync(parsed.dir, { recursive: true });
 			const filePaths: string[] = [];
 			imageBuffers.forEach((buf, idx) => {
 				const numberedName = imageBuffers.length > 1 ? `${parsed.name}_${idx}${parsed.ext || `.${imageFormat}`}` : `${parsed.name}${parsed.ext || `.${imageFormat}`}`;
@@ -413,12 +413,12 @@ const ImageGenerate: ResourceOperations = {
 				fs.writeFileSync(fullPath, buf);
 				filePaths.push(fullPath);
 			});
-			return { ...baseResult, filePaths, raw: res as any };
+			return { ...baseResult, filePaths, raw: res};
 		}
 
 		// json
 		const imagesBase64 = imageBuffers.map((b) => b.toString('base64'));
-		return { ...baseResult, imagesBase64, raw: res as any };
+		return { ...baseResult, imagesBase64, raw: res};
 	},
 };
 
