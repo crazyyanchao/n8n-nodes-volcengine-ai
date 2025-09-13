@@ -33,6 +33,14 @@ class VolcengineAiRequestUtils {
 				throw error;
 			}
 
+			if (options.headers['Authorization']) {
+				options.headers['Authorization'] = '<CONFIDENTIALITY>';
+			}
+
+			if (options.headers['X-Api-Access-Key']) {
+				options.headers['X-Api-Access-Key'] = '<CONFIDENTIALITY>';
+			}
+
 			const optionsInfo = JSON.stringify(options);
 
 			throw new NodeOperationError(
