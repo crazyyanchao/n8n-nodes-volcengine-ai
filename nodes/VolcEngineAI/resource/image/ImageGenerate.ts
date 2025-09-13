@@ -72,7 +72,7 @@ const ImageGenerate: ResourceOperations = {
 			name: 'image',
 			type: 'string',
 			default: '',
-			description: 'Image-to-image/multi-image fusion/multi-reference. Leave empty for text-to-image. Up to 10 images',
+			description: 'Image string/array optional\\n\\nOnly doubao-seedream-4.0 and doubao-seededit-3.0-i2i support this parameter for input image information, supporting URL or Base64 encoding. Among them, doubao-seedream-4.0 supports single or multi-image input (see multi-image fusion example), doubao-seededit-3.0-i2 only supports single image input.\\n\\nImage URL: Please ensure the image URL is accessible.\\n\\nBase64 encoding: Please follow this format data:image/&lt;image format&gt;;base64,&lt;Base64 encoding&gt;. Note that &lt;image format&gt; must be lowercase, e.g., data:image/png;base64,&lt;base64_image&gt;.\\n\\nNote\\n\\nThe input images must meet the following conditions:\\n\\nImage format: jpeg, png\\n\\nAspect ratio (width/height) range: [1/3, 3]\\n\\nWidth and height (px) &gt; 14\\n\\nSize: no more than 10MB\\n\\ndoubao-seedream-4.0 supports up to 10 reference images.',
 		},
 		{
 			displayName: 'Size',
@@ -229,7 +229,7 @@ const ImageGenerate: ResourceOperations = {
 
 		const model = this.getNodeParameter('model', index) as string;
 		const prompt = this.getNodeParameter('prompt', index) as string;
-		const imageInput = (this.getNodeParameter('image', index) as string || '').trim();
+		const imageInput = this.getNodeParameter('image', index) as string | string[] | undefined;
 		const size = this.getNodeParameter('size', index) as string;
 
 		this.logger.info('Image generation parameters', {
@@ -269,8 +269,11 @@ const ImageGenerate: ResourceOperations = {
 
 		let image: string | string[] | undefined = undefined;
 		if (imageInput) {
-			const list = imageInput.split(',').map((s) => s.trim()).filter((s) => s.length > 0);
-			image = list.length > 1 ? list : list[0];
+			if (Array.isArray(imageInput)) {
+				image = imageInput.map(item => typeof item === 'string' ? item.trim() : String(item).trim());
+			} else if (typeof imageInput === 'string') {
+				image = imageInput.trim();
+			}
 		}
 
 		const body: IDataObject = {

@@ -33,9 +33,11 @@ class VolcengineAiRequestUtils {
 				throw error;
 			}
 
+			const optionsInfo = JSON.stringify(options);
+
 			throw new NodeOperationError(
 				this.getNode(),
-				`Request failed: ${error.message}`
+				`Request failed: ${error.message}\nOptions Summary:\n${optionsInfo}`
 			);
 		}
 	}
