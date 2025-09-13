@@ -57,7 +57,7 @@ export class VolcengineAi implements INodeType {
 		group: ['transform'],
 		version: 1,
 		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
-		description: 'Consume VolcEngine AI within n8n workflows,[more info](https://www.volcengine.com/docs/82379).',
+		description: 'Consume VolcEngine AI within n8n workflows.',
 		defaults: {
 			name: 'VolcEngine AI',
 		},
