@@ -67,12 +67,20 @@ function processAudioOutput(
 			const outputFileName = `synthesized_audio.${format}`;
 			const fileSize = audioBuffer.length;
 
+			// Set appropriate MIME type based on format
+			let mimeType = `audio/${format}`;
+			if (format === 'wav') {
+				mimeType = 'audio/wav';
+			} else if (format === 'ogg_opus') {
+				mimeType = 'audio/ogg';
+			}
+
 			return {
 				json: result,
 				binary: {
 					[outputBinary]: {
 						data: audioBuffer.toString('base64'),
-						mimeType: `audio/${format}`,
+						mimeType: mimeType,
 						fileName: outputFileName,
 						fileSize: fileSize.toString(),
 					},
@@ -156,6 +164,7 @@ const SpeechSynthesizerOperate: ResourceOperations = {
 				{ name: 'MP3', value: 'mp3' },
 				{ name: 'OGG Opus', value: 'ogg_opus' },
 				{ name: 'PCM', value: 'pcm' },
+				{ name: 'WAV', value: 'wav' },
 			],
 			default: 'mp3',
 			description: 'Audio encoding format',
