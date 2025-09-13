@@ -272,6 +272,18 @@ const ImageGenerate: ResourceOperations = {
 			if (Array.isArray(imageInput)) {
 				image = imageInput.map(item => typeof item === 'string' ? item.trim() : String(item).trim());
 			} else if (typeof imageInput === 'string') {
+				// 尝试将 imageInput 作为 JSON 字符串解析为数组，如果失败则直接赋值
+				let parsedImage: any;
+				try {
+					parsedImage = JSON.parse(imageInput);
+					if (Array.isArray(parsedImage)) {
+						image = parsedImage.map(item => typeof item === 'string' ? item.trim() : String(item).trim());
+					} else {
+						image = imageInput.trim();
+					}
+				} catch (e) {
+					image = imageInput.trim();
+				}
 				image = imageInput.trim();
 			}
 		}
