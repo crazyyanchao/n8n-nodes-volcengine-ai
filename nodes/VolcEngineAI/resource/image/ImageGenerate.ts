@@ -284,7 +284,6 @@ const ImageGenerate: ResourceOperations = {
 				} catch (e) {
 					image = imageInput.trim();
 				}
-				image = imageInput.trim();
 			}
 		}
 
