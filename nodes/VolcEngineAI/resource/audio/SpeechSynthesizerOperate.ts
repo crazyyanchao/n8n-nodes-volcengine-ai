@@ -24,6 +24,27 @@ function generateMD5(text: string, speaker: string, audioParams: any): string {
 	return crypto.createHash('md5').update(content).digest('hex');
 }
 
+// Helper function to generate cache key based on settings
+function generateCacheKey(
+	text: string,
+	speaker: string,
+	audioParams: any,
+	cacheKeySettings: any
+): string {
+	const cacheKeyMode = cacheKeySettings?.cacheKeyMode || 'auto';
+
+	if (cacheKeyMode === 'custom') {
+		const customCacheKey = (cacheKeySettings?.customCacheKey as string) || '';
+		const calculateMD5 = cacheKeySettings?.calculateMD5 !== false;
+		return calculateMD5 ? crypto.createHash('md5').update(customCacheKey).digest('hex') : customCacheKey;
+	} else {
+		// Auto mode - use existing logic with additional parameters
+		const additionalParams = cacheKeySettings?.additionalParams || '';
+		const content = JSON.stringify({ text, speaker, audioParams, additionalParams });
+		return crypto.createHash('md5').update(content).digest('hex');
+	}
+}
+
 // Helper function to check if cached file exists
 function getCachedFilePath(md5: string, format: string, cacheDir: string): string {
 	return path.join(cacheDir, `${md5}.${format}`);
@@ -295,6 +316,67 @@ const SpeechSynthesizerOperate: ResourceOperations = {
 			},
 		},
 		{
+			displayName: 'Cache Key Settings',
+			name: 'cacheKeySettings',
+			type: 'collection',
+			default: {},
+			description: 'Settings for cache key generation',
+			displayOptions: {
+				show: {
+					enableCache: [true],
+				},
+			},
+			options: [
+				{
+					displayName: 'Cache Key Mode',
+					name: 'cacheKeyMode',
+					type: 'options',
+					options: [
+						{ name: 'Auto Generate (Params)', value: 'auto', description: 'Automatically generate cache key based on request parameters' },
+						{ name: 'Custom String', value: 'custom', description: 'Use a custom string as cache key' },
+					],
+					default: 'auto',
+					description: 'How to generate the cache key',
+				},
+				{
+					displayName: 'Custom Cache Key',
+					name: 'customCacheKey',
+					type: 'string',
+					default: '',
+					description: 'Custom string as cache key (only when Cache Key Mode is "Custom String")',
+					displayOptions: {
+						show: {
+							cacheKeyMode: ['custom'],
+						},
+					},
+				},
+				{
+					displayName: 'Calculate MD5 Hash',
+					name: 'calculateMD5',
+					type: 'boolean',
+					default: true,
+					description: 'Whether to calculate MD5 hash of the custom cache key (only for "Custom String")',
+					displayOptions: {
+						show: {
+							cacheKeyMode: ['custom'],
+						},
+					},
+				},
+				{
+					displayName: 'Additional Parameters',
+					name: 'additionalParams',
+					type: 'string',
+					default: '',
+					description: 'Additional parameters to include in auto-generated cache key (optional)',
+					displayOptions: {
+						show: {
+							cacheKeyMode: ['auto'],
+						},
+					},
+				},
+			],
+		},
+		{
 			displayName: 'Additional Options',
 			name: 'additionalOptions',
 			type: 'collection',
@@ -377,6 +459,7 @@ const SpeechSynthesizerOperate: ResourceOperations = {
 		const outputFormat = this.getNodeParameter('outputFormat', index) as string;
 		const enableCache = this.getNodeParameter('enableCache', index) as boolean;
 		const cacheDir = enableCache ? (this.getNodeParameter('cacheDir', index) as string) : './cache/audio';
+		const cacheKeySettings = enableCache ? (this.getNodeParameter('cacheKeySettings', index, {}) as IDataObject) : {};
 		const additionalOptions = this.getNodeParameter('additionalOptions', index, {}) as IDataObject;
 
 		// Get credentials
@@ -398,12 +481,12 @@ const SpeechSynthesizerOperate: ResourceOperations = {
 			...additionalOptions
 		};
 
-		const md5Hash = generateMD5(text, speaker, audioParams);
+		const cacheKey = enableCache ? generateCacheKey(text, speaker, audioParams, cacheKeySettings) : generateMD5(text, speaker, audioParams);
 
 		// Check cache if enabled
 		if (enableCache) {
 			ensureCacheDir(cacheDir);
-			const cachedFilePath = getCachedFilePath(md5Hash, format, cacheDir);
+			const cachedFilePath = getCachedFilePath(cacheKey, format, cacheDir);
 
 			if (fs.existsSync(cachedFilePath)) {
 				this.logger.info('Using cached audio file', { filePath: cachedFilePath });
@@ -499,7 +582,7 @@ const SpeechSynthesizerOperate: ResourceOperations = {
 								// Save to cache if enabled
 								if (enableCache && fullAudioBuffer.length > 0) {
 									ensureCacheDir(cacheDir);
-									const cachedFilePath = getCachedFilePath(md5Hash, format, cacheDir);
+									const cachedFilePath = getCachedFilePath(cacheKey, format, cacheDir);
 									fs.writeFileSync(cachedFilePath, fullAudioBuffer);
 									this.logger.info('Audio saved to cache', { filePath: cachedFilePath });
 								}

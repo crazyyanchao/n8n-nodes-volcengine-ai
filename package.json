@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-volcengine-ai",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "n8n custom node for VolcEngine AI services including chat completion and code completion",
   "keywords": [
     "n8n-community-node-package",
