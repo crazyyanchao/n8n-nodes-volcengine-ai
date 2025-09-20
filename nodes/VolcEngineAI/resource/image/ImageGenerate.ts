@@ -68,7 +68,7 @@ const ImageGenerate: ResourceOperations = {
 			required: true,
 		},
 		{
-			displayName: 'Image (URL or Data URL, Comma-Separated)',
+			displayName: 'Image (URL or Data URL, Array or JSON String)',
 			name: 'image',
 			type: 'string',
 			default: '',
